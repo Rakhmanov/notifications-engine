@@ -7,8 +7,9 @@ package mocks
 import (
 	reflect "reflect"
 
-	services "github.com/argoproj/notifications-engine/pkg/services"
 	gomock "github.com/golang/mock/gomock"
+
+	services "github.com/argoproj/notifications-engine/pkg/services"
 )
 
 // MockNotificationService is a mock of NotificationService interface.

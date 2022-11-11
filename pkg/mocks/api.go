@@ -7,10 +7,11 @@ package mocks
 import (
 	reflect "reflect"
 
+	gomock "github.com/golang/mock/gomock"
+
 	api "github.com/argoproj/notifications-engine/pkg/api"
 	services "github.com/argoproj/notifications-engine/pkg/services"
 	triggers "github.com/argoproj/notifications-engine/pkg/triggers"
-	gomock "github.com/golang/mock/gomock"
 )
 
 // MockAPI is a mock of API interface.

@@ -1,12 +1,13 @@
 package services
 
 import (
+	"bytes"
 	"context"
 	"os"
+	texttemplate "text/template"
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/argoproj/notifications-engine/pkg/util/text"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
@@ -14,7 +15,7 @@ import (
 )
 
 type AwsSqsNotification struct {
-	Body string `json:"body"`
+	MessageAttributes map[string]string `json:"messageAttributes"`
 }
 
 type AwsSqsOptions struct {
@@ -39,11 +40,6 @@ type awsSqservice struct {
 }
 
 func (s awsSqservice) Send(notification Notification, dest Destination) error {
-	// If body provided inside of the template merge it with required message.
-	if notification.AwsSqs != nil {
-		notification.Message = text.Coalesce(notification.AwsSqs.Body, notification.Message)
-	}
-
 	// Slice for AWS config options
 	var options []func(*config.LoadOptions) error
 
@@ -121,6 +117,41 @@ func (s awsSqservice) Send(notification Notification, dest Destination) error {
 	}
 	log.Debug("Message Sent with Id: ", *resp.MessageId)
 
+	return nil
+}
+
+func (n *AwsSqsNotification) GetTemplater(name string, f texttemplate.FuncMap) (Templater, error) {
+	return func(notification *Notification, vars map[string]interface{}) error {
+		if notification.AwsSqs == nil {
+			notification.AwsSqs = &AwsSqsNotification{}
+		}
+
+		if len(n.MessageAttributes) > 0 {
+			notification.AwsSqs.MessageAttributes = n.MessageAttributes
+			if err := notification.AwsSqs.parseMessageAttributes(name, f, vars); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	}, nil
+}
+
+func (n *AwsSqsNotification) parseMessageAttributes(name string, f texttemplate.FuncMap, vars map[string]interface{}) error {
+	for k, v := range n.MessageAttributes {
+		var tempData bytes.Buffer
+
+		tmpl, err := texttemplate.New(name).Funcs(f).Parse(v)
+		if err != nil {
+			continue
+		}
+		if err := tmpl.Execute(&tempData, vars); err != nil {
+			return err
+		}
+		if val := tempData.String(); val != "" {
+			n.MessageAttributes[k] = val
+		}
+	}
 	return nil
 }
 

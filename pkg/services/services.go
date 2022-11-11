@@ -59,6 +59,9 @@ type Destination struct {
 
 func (n *Notification) GetTemplater(name string, f texttemplate.FuncMap) (Templater, error) {
 	var sources []TemplaterSource
+	if n.AwsSqs != nil {
+		sources = append(sources, n.AwsSqs)
+	}
 	if n.Slack != nil {
 		sources = append(sources, n.Slack)
 	}
